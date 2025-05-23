@@ -5,9 +5,11 @@ from datetime import datetime
 app = Flask(__name__)
 DB = 'database.db'
 
+# Initialize the database and create tables if not exist
 def init_db():
     with sqlite3.connect(DB) as conn:
         cursor = conn.cursor()
+        # Table for transaction records
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +21,7 @@ def init_db():
                 timestamp TEXT
             )
         ''')
-
+        # Table for product information
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS products (
                 uid TEXT PRIMARY KEY,
@@ -29,8 +31,7 @@ def init_db():
             )
         ''')
 
-
-
+        # Insert default products if table is empty
         cursor.execute("SELECT COUNT(*) FROM products")
         if cursor.fetchone()[0] == 0:
             products = [
@@ -42,18 +43,19 @@ def init_db():
                 INSERT INTO products (uid, name, price, is_fruit)
                 VALUES (?, ?, ?, ?)
             ''', products)
-
         conn.commit()
 
-
+# Root endpoint to check if backend is running
 @app.route('/')
 def home():
     return 'Smart Cart Backend Running'
 
+# Render dashboard HTML page
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
 
+# Receive and store cart transaction data
 @app.route('/add_cart_data', methods=['POST'])
 def add_cart_data():
     data = request.get_json()
@@ -71,10 +73,9 @@ def add_cart_data():
                 INSERT INTO transactions (customer, product, price, weight, cart_id, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (customer, name, price, weight, cart_id, timestamp))
-
     return jsonify({"status": "success"}), 200
 
-
+# Return all transaction data as JSON
 @app.route('/get_data')
 def get_data():
     with sqlite3.connect(DB) as conn:
@@ -85,13 +86,13 @@ def get_data():
         data = [dict(row) for row in rows]
         return jsonify(data)
 
+# Retrieve product info by UID
 @app.route('/get_product/<uid>', methods=['GET'])
 def get_product(uid):
     with sqlite3.connect(DB) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT name, price, is_fruit FROM products WHERE uid = ?", (uid,))
         result = cursor.fetchone()
-
         if result:
             name, price, is_fruit = result
             return jsonify({
@@ -102,8 +103,7 @@ def get_product(uid):
         else:
             return jsonify({"error": "Product not found"}), 404
 
-
-
+# Add or update a product in the database
 @app.route('/add_product', methods=['POST'])
 def add_product():
     data = request.get_json()
@@ -121,18 +121,16 @@ def add_product():
 
     return jsonify({"status": "success", "message": "Product added"})
 
-
+# Delete a product from the database by UID
 @app.route('/delete_product/<uid>', methods=['DELETE'])
 def delete_product(uid):
     with sqlite3.connect(DB) as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM products WHERE uid = ?", (uid,))
         conn.commit()
-
     return jsonify({"status": "success", "message": f"Product {uid} deleted."})
 
-
+# Run the Flask app and initialize the DB
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, host='0.0.0.0')
-
