@@ -20,7 +20,6 @@ def init_db():
             )
         ''')
 
-        # 商品信息表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS products (
                 uid TEXT PRIMARY KEY,
@@ -32,8 +31,6 @@ def init_db():
 
 
 
-
-        # 插入初始商品数据（如果表为空）
         cursor.execute("SELECT COUNT(*) FROM products")
         if cursor.fetchone()[0] == 0:
             products = [
