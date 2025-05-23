@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="icon" href="data:,">
+
+  <title>Smart Cart Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas"></script>
+  <style id="theme-style">
+    :root {
+      --bg: #f5f0ff;
+      --card: white;
+      --text: #2d004d;
+      --accent: #8a2be2;
+      --warn: #ff4d4d;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1e1e2f;
+      --card: #2c2c3d;
+      --text: #eeeeff;
+      --accent: #c78cff;
+      --warn: #ff6666;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 2rem 5%;
+      margin: 0;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    
+    .summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2rem auto;
+  max-width: 900px;
+}
+
+.card-box {
+  flex: 1;
+  min-width: 280px;
+  background: var(--card);
+  color: var(--text);
+  padding: 1rem;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  text-align: center;
+  font-size: 1.1rem;
+  position: relative;
+}
+
+.card-box .tooltip {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.7rem;
+  cursor: help;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.card-box .tooltip:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 1.5rem;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  border-radius: 6px;
+  z-index: 10;
+}
+
+.low-stock {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+
+.chart-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+
+canvas {
+  width: 100% !important;
+  height: 300px !important;
+  display: block;
+}
+
+
+.chart-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+
+    
+
+    .low-stock {
+      color: var(--warn);
+      border-left-color: var(--warn);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    select, button, input[type="date"] {
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .chart-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .chart-container {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+    }
+
+    
+    #revenueChart { width: 700px; height: 400px; }
+    #barChart     { width: 700px; height: 400px; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 2rem;
+      background: var(--card);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 1rem;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    .toggle {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="toggle">
+    <button onclick="toggleTheme()">🌗 Toggle Theme</button>
+  </div>
+
+  <h1>🛒 Smart Shopping Cart Dashboard</h1>
+  <div class="summary-row">
+  <div class="card-box" id="totalRevenue">
+    💰 Total Revenue: $0.00<br>
+    🏷️ Inventory left: —
+  </div>
+  <div class="card-box" id="miniSummary">
+    🧍 Customers: 0 | 🧺 Items Sold: 0<br>
+    💸 Avg Cart: $0.00
+    <span class="tooltip" data-tip="Average = Revenue ÷ Items Sold">ℹ️</span>
+  </div>
+  <div class="card-box" id="liveCarts">
+    🛒 Live Carts in Use: <span id="liveCartCount">0</span>
+  </div>
+
+  <div class="card-box" id="avgDuration">
+    ⏳ Average Shopping Time: <span id="avgTime">0m 0s</span>
+  </div>
+
+
+
+</div>
+
+<div class="card-box low-stock" id="lowStockAlert" style="display:none;">
+  ⚠️ Low stock alert
+</div>
+
+  
+  <div class="controls">
+    <select id="customerFilter">
+      <option value="all">All Customers</option>
+    </select>
+    <input type="date" id="dateFilter">
+    <button onclick="downloadCSV()">⬇️ Export CSV</button>
+    <button onclick="downloadPDF()">📄 Download PDF</button>
+  </div>
+
+
+
+
+
+ <div class="chart-row">
+    <!-- Most Sold Products -->
+    <div class="chart-container" style="flex: 1;">
+      <h3>🏆 Top 5 Products Sold</h3>
+      <canvas id="barChart"></canvas>
+    </div>
+
+    <!-- Least Sold Products -->
+    <div class="chart-container" style="flex: 1;">
+      <h3>📉 Least Sold Products</h3>
+      <canvas id="leastSoldChart"></canvas>
+    </div>
+  </div>
+
+
+  <div class="chart-row">
+    <div class="chart-container" style="flex: 1;">
+      <h3>📅 Revenue by Day of Week</h3>
+      <canvas id="weekdayChart"></canvas>
+    </div>
+
+
+
+    <div class="chart-container" style="flex: 1;">
+      <h3>🕒 Revenue by Hour</h3>
+      <canvas id="revenueChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-container" style="flex: 0.6; min-width: 250px;">
+      <h3>🍰 Product Distribution</h3>
+      <canvas id="productChart" width="250" height="250"></canvas>
+
+    </div>
+
+    <div class="chart-container" style="flex: 1.4; min-width: 400px;">
+      <h3>⚖️ Average Weight per Product</h3>
+      <canvas id="avgWeightChart"></canvas>
+    </div>
+  </div>
+
+
+
+
+
+
+
+
+  <div class="chart-row">
+    <!-- 🔁 Frequently Bought Together -->
+    <div class="chart-container" style="flex: 1;">
+      <h3>🔁 Frequently Bought Together</h3>
+      <ul id="frequentPairs" style="padding-left: 1rem;"></ul>
+    </div>
+
+    <!-- 🚫 Most Abandoned Products -->
+    <div class="chart-container" style="flex: 1;">
+      <h3>🚫 Most Abandoned Products (Top 5)</h3>
+      <canvas id="abandonedChart"></canvas>
+    </div>
+  </div>
+
+
+
+
+
+
+
+  <!-- ⌛ Cart Abandonment -->
+  <div class="card-box" id="abandonmentWarning">
+    🚨 Abandoned Carts: <span id="abandonedCount">0</span>
+  </div>
+
+  <!-- 📦 Stock Forecast -->
+  <div class="card-box" id="stockForecast">
+    🔮 Predicted Stockouts Soon: <span id="stockAlerts">Checking...</span>
+  </div>
+
+
+
+  <table id="transactionTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Customer</th>
+        <th>Items</th>
+        <th>Total ($)</th>
+        <th>Timestamp</th>
+        <th>Weight (kg)</th>
+
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+<script>
+  let allData = [];
+  let pieChart, barChart, revenueChart, leastSoldChart, avgWeightChart, weekdayChart;
+
+  function debounce(func, delay) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
+function safeDestroy(chartInstance) {
+  if (chartInstance && typeof chartInstance.destroy === "function") {
+    chartInstance.destroy();
+  }
+}
+
+  function toggleTheme() {
+    const body = document.body;
+    const current = body.getAttribute('data-theme');
+    body.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+  }
+
+  function downloadCSV() {
+    const rows = Array.from(document.querySelectorAll("table tr")).map(row =>
+      Array.from(row.children).map(cell => `"${cell.textContent}"`).join(",")
+    );
+    const csv = rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "transactions.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function downloadPDF() {
+    html2canvas(document.body).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF();
+
+      const width = pdf.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+      pdf.save("dashboard.pdf");
+    });
+  }
+
+  function formatItems(raw) {
+    try {
+      const items = JSON.parse(raw.replace(/'/g, '"'));
+      return items.map(i => `${i.name} ($${i.price})`).join(', ');
+    } catch (e) {
+      return raw;
+    }
+  }
+
+  function applyFilters(data) {
+    const selectedCustomer = document.getElementById("customerFilter").value;
+    const selectedDate = document.getElementById("dateFilter").value;
+
+    return data.filter(tx => {
+      const matchesCustomer = selectedCustomer === "all" || tx.customer === selectedCustomer;
+      const matchesDate = !selectedDate || tx.timestamp.startsWith(selectedDate);
+      return matchesCustomer && matchesDate;
+    });
+  }
+
+  function updateDashboard(data) {
+    safeDestroy(pieChart); safeDestroy(barChart); safeDestroy(revenueChart);
+    safeDestroy(leastSoldChart); safeDestroy(avgWeightChart); safeDestroy(weekdayChart); //safeDestroy(abandonedChart);
+
+    const tbody = document.querySelector('#transactionTable tbody');
+    tbody.innerHTML = "";
+
+    let totalRevenue = 0;
+    let itemCount = {};
+    let weightSum = {};
+    let weightCount = {};
+    let revenueByHour = {};
+    let revenueByDay = {
+      "Sunday": 0, "Monday": 0, "Tuesday": 0, "Wednesday": 0,
+      "Thursday": 0, "Friday": 0, "Saturday": 0
+    };
+
+    let customers = new Set();
+    let inventory = {};
+    let abandonedChart;
+
+    if (data.length === 0) {
+  document.getElementById("transactionTable").style.display = "none";
+  alert("No data found for the selected date.");
+  return;
+} else {
+  document.getElementById("transactionTable").style.display = "table";
+}
+
+
+
+    data.forEach(tx => {
+      customers.add(tx.customer);
+
+      // Build table row
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${tx.id}</td>
+        <td>${tx.customer}</td>
+        <td>${tx.product}</td>
+        <td>${tx.price.toFixed(2)}</td>
+        <td>${tx.timestamp}</td>
+        <td>${tx.weight ? tx.weight.toFixed(2) : '0.00'}</td>
+      `;
+      tbody.appendChild(row);
+
+      // Aggregations
+      totalRevenue += tx.price;
+
+      itemCount[tx.product] = (itemCount[tx.product] || 0) + 1;
+      inventory[tx.product] = (inventory[tx.product] || 100) - 1;
+
+      if (tx.weight) {
+        weightSum[tx.product] = (weightSum[tx.product] || 0) + tx.weight;
+        weightCount[tx.product] = (weightCount[tx.product] || 0) + 1;
+      }
+
+      const hour = new Date(tx.timestamp).getHours();
+      const weekday = new Date(tx.timestamp).toLocaleDateString("en-US", { weekday: 'long' });
+
+      revenueByHour[`${hour}:00`] = (revenueByHour[`${hour}:00`] || 0) + tx.price;
+      revenueByDay[weekday] += tx.price;
+    });
+
+    // Update summaries
+    document.getElementById("totalRevenue").innerText =
+      `💰 Total Revenue: $${totalRevenue.toFixed(2)} | 🏷️ Inventory left: ` +
+      Object.entries(inventory).map(([item, qty]) => `${item}: ${Math.max(qty, 0)}`).join(", ");
+
+    let avgCart = data.length > 0 ? (totalRevenue / data.length).toFixed(2) : "0.00";
+    document.getElementById("miniSummary").innerText =
+      `🧍 Customers: ${customers.size} | 🧺 Items Sold: ${data.length} | 💸 Avg Cart: $${avgCart}`;
+
+
+    // Filter dropdown
+    const customerSelect = document.getElementById("customerFilter");
+    // customerSelect.innerHTML = `<option value="all">All Customers</option>`;
+    // [...customers].forEach(c => {
+    //   const option = document.createElement("option");
+    //   option.value = c;
+    //   option.textContent = c;
+    //   customerSelect.appendChild(option);
+    // });
+
+    // Pie Chart: Product Share
+    if (pieChart) safeDestroy(pieChart);
+    pieChart = new Chart(document.getElementById('productChart'), {
+      type: 'pie',
+      data: {
+        labels: Object.keys(itemCount),
+        datasets: [{
+          data: Object.values(itemCount),
+          backgroundColor: ['#4caf50', '#2196f3', '#ff9800', '#f44336', '#9c27b0', '#ffcc00', '#33ccff', '#cc66ff']
+        }]
+      }
+    });
+
+    // Bar Chart: Top Products
+    const topItems = Object.entries(itemCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (barChart) safeDestroy(barChart);
+    barChart = new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: {
+        labels: topItems.map(i => i[0]),
+        datasets: [{
+          label: 'Top Products',
+          data: topItems.map(i => i[1]),
+          backgroundColor: '#8a2be2'
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+
+    // Bar Chart: Avg Weight
+    const avgWeightData = Object.entries(weightSum).map(([k, v]) => [k, (v / weightCount[k]).toFixed(2)]);
+    if (avgWeightChart) safeDestroy(avgWeightChart);
+    avgWeightChart = new Chart(document.getElementById('avgWeightChart'), {
+      type: 'bar',
+      data: {
+        labels: avgWeightData.map(i => i[0]),
+        datasets: [{
+          label: 'Avg Weight (kg)',
+          data: avgWeightData.map(i => i[1]),
+          backgroundColor: '#60a5fa'
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+
+    // Bar Chart: Revenue by Day of Week
+    if (weekdayChart) safeDestroy(weekdayChart);
+    weekdayChart = new Chart(document.getElementById('weekdayChart'), {
+      type: 'bar',
+      data: {
+        labels: Object.keys(revenueByDay),
+        datasets: [{
+          label: 'Revenue by Day',
+          data: Object.values(revenueByDay),
+          backgroundColor: '#4ade80'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Update abandoned cart and stock forecast
+    document.getElementById("abandonedCount").innerText = "—";  // You can later calculate this
+    const lowStock = Object.entries(inventory).filter(([_, qty]) => qty < 10);
+    document.getElementById("stockAlerts").innerText = lowStock.length
+      ? lowStock.map(([item, qty]) => `${item} (${qty})`).join(", ")
+      : "All good 🚀";
+
+
+    // 🔁 Frequently Bought Together (based on cart_id grouping)
+    const cartGroups = {};
+    data.forEach(tx => {
+      if (!cartGroups[tx.cart_id]) cartGroups[tx.cart_id] = [];
+      cartGroups[tx.cart_id].push(tx.product);
+    });
+
+    const pairMap = {};
+    Object.values(cartGroups).forEach(products => {
+      const unique = [...new Set(products)];
+      for (let i = 0; i < unique.length; i++) {
+        for (let j = i + 1; j < unique.length; j++) {
+          const pair = [unique[i], unique[j]].sort().join(" + ");
+          pairMap[pair] = (pairMap[pair] || 0) + 1;
+        }
+      }
+    });
+
+    const frequentPairs = Object.entries(pairMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    document.getElementById("frequentPairs").innerHTML = frequentPairs.length
+      ? frequentPairs.map(p => `<li>${p[0]} — ${p[1]} times</li>`).join("")
+      : `<li>No frequent pairs yet</li>`;
+
+    // 🚨 Abandoned Carts = carts that appeared only once (incomplete)
+    const cartCounts = {};
+    data.forEach(tx => {
+      cartCounts[tx.cart_id] = (cartCounts[tx.cart_id] || 0) + 1;
+    });
+    let abandoned = 0;
+    Object.values(cartCounts).forEach(c => {
+      if (c < 2) abandoned++;
+    });
+    document.getElementById("abandonedCount").innerText = abandoned;
+
+    // 🔮 Predicted Stockouts = products with low inventory
+    const forecast = Object.entries(inventory).filter(([_, qty]) => qty < 10);
+    document.getElementById("stockAlerts").innerText =
+      forecast.length
+        ? forecast.map(([item, qty]) => `${item} (${qty})`).join(", ")
+        : "All good 🚀";
+
+    if (revenueChart) safeDestroy(revenueChart);
+    revenueChart = new Chart(document.getElementById('revenueChart'), {
+      type: 'line',
+      data: {
+        labels: Object.keys(revenueByHour),
+        datasets: [{
+          label: 'Revenue by Hour',
+          data: Object.values(revenueByHour),
+          borderColor: '#2d2d80',
+          backgroundColor: '#a3bffa',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: "Revenue ($)" }
+          },
+          x: {
+            title: { display: true, text: "Hour" }
+          }
+        }
+      }
+    });
+
+
+    const leastItems = Object.entries(itemCount)
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, 5);
+    if (leastSoldChart) safeDestroy(leastSoldChart);
+    leastSoldChart = new Chart(document.getElementById('leastSoldChart'), {
+      type: 'bar',
+      data: {
+        labels: leastItems.map(i => i[0]),
+        datasets: [{
+          label: 'Least Sold',
+          data: leastItems.map(i => i[1]),
+          backgroundColor: '#f87171'
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        scales: {
+          x: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    // // // 🧯 Abandoned Products Chart
+    // const abandonedSorted = Object.entries(itemCount).map(([product, count]) => ({ product, count })).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    // if (window.abandonedChart) safeDestroy(abandonedChart);
+    // abandonedChart = new Chart(document.getElementById('abandonedChart'), {
+    //   type: 'bar',
+    //   data: {
+    //     labels: abandonedSorted.map(i => i.product),
+    //     datasets: [{
+    //       label: 'Times Abandoned',
+    //       data: abandonedSorted.map(i => i.count),
+    //       backgroundColor: '#e11d48'
+    //     }]
+    //   },
+    //   options: {
+    //     indexAxis: 'y',
+    //     responsive: true,
+    //     scales: {
+    //       x: {
+    //         beginAtZero: true
+    //       }
+    //     }
+    //   }
+    // });
+
+
+
+
+  }
+
+
+  function populateCustomerDropdown(data) {
+  const customers = [...new Set(data.map(d => d.customer).filter(Boolean))];
+  const select = document.getElementById("customerFilter");
+  select.innerHTML = `<option value="all">All Customers</option>`;
+  customers.forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  });
+}
+
+
+function fetchDataAndUpdate() {
+  fetch('/get_data')
+    .then(res => res.json())
+    .then(data => {
+      allData = data;
+      populateCustomerDropdown(allData); 
+      updateDashboard(allData);
+    });
+}
+
+// 🧠 Improved: Auto-refresh that pauses when interacting with filters
+let refreshTimer;
+
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    // Only refresh if you're not focusing a filter input
+    const activeTag = document.activeElement.tagName;
+    if (activeTag !== "SELECT" && activeTag !== "INPUT") {
+      fetchDataAndUpdate();
+    }
+  }, 10000);
+}
+
+// Filters: update and resume auto-refresh cleanly
+document.getElementById("customerFilter").addEventListener("change", debounce(() => {
+  updateDashboard(applyFilters(allData));
+  startAutoRefresh();
+}, 300));
+
+
+document.getElementById("dateFilter").addEventListener("input", debounce(() => {
+  updateDashboard(applyFilters(allData));
+  startAutoRefresh();
+}, 300));
+
+
+
+fetchDataAndUpdate();
+startAutoRefresh();
+</script>
+</body>
+</html>
